@@ -50,3 +50,29 @@ Pero también podría detectar como similares:
 - "Cereal Nestlé Chocapic Yogurt" → incorrecto
 
 Estos errores son inevitables sin un modelo que entienda el contexto del lenguaje. Técnicas simples como bolsa de palabras o listas de tokens frecuentes no cubren todas las combinaciones posibles.
+
+
+### Resultados
+
+Hay 59 casos seguros donde los nombres diferentes corresponden al mismo producto
+
+#### Principales causas de discrepancia en nombres
+
+- **Orden de palabras distinto:**  
+  Ejemplo: `"COLISEO HALLADO"` vs `"HALLADO COLISEO"`
+
+- **Puntuación o símbolos:**  
+  Ejemplo: `"1 KG"` vs `"1 KG."`, `"C.K"` vs `"CERO K"`
+
+- **Palabras abreviadas o sinónimos:**  
+  Ejemplo: `"PASTA FIDEO"` vs `"FIDEO"`  
+  `"SACHET"` vs `"SACHET APROX"`
+
+- **Medidas diferentes expresadas igual:**  
+  Ejemplo: `"ML"` vs `"CC"`
+
+- **Errores o codificación especial:**  
+  Ejemplo: `"PI¥A"` en lugar de `"PIÑA"`
+
+- **Diferencias menores aceptables en ortografía/plural:**  
+  Ejemplo: `"lomito"` vs `"lomitos"`
