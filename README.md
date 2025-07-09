@@ -11,10 +11,10 @@
    
    Se excluyen productos que tienen el mismo SKU (código idéntico).
 
-3. **Diferentes subempresas **  
+3. **Diferentes subempresas**  
 Solo se comparan productos que pertenecen a distintas subempresas.
 
-**4. Coincidencia de números clave**  
+4. **Coincidencia de números clave**  
 Se extraen cantidades relevantes del nombre del producto (por ejemplo: `500 ml`, `20 bolsitas`, `1/2 litro`).  
 - Si ambos productos contienen la misma cantidad de números, todos deben coincidir exactamente.  
 - Si la cantidad de números es distinta, al menos uno debe coincidir.  
@@ -36,3 +36,15 @@ Contiene pares de productos con:
 ####  2. **Tabla de revisión manual** (`needs_review_df`)
 Contiene:
 - Pairs con similitud entre el umbral bajo y el de confianza (`low_confidence_threshold ≤ similarity < confidence_threshold`, por defecto `90–92`)
+
+En esta tabla pueden aparecer unos ejemplos que en realidad pertenecen a los productos diferentes
+Este enfoque no tiene comprensión semántica profunda.  
+Por ejemplo, puede detectar como similares:
+- "Café Nescafé Tradición"
+- "Café Nescafé Tradición Tarro" → correcto
+
+Pero también podría detectar como similares:
+- "Cereal Nestlé Chocapic"
+- "Cereal Nestlé Chocapic Yogurt" → incorrecto
+
+Estos errores son inevitables sin un modelo que entienda el contexto del lenguaje. Técnicas simples como bolsa de palabras o listas de tokens frecuentes no cubren todas las combinaciones posibles.
