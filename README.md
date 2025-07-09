@@ -16,9 +16,11 @@ Solo se comparan productos que pertenecen a distintas subempresas.
 
 4. **Coincidencia de números clave**  
 Se extraen cantidades relevantes del nombre del producto (por ejemplo: `500 ml`, `20 bolsitas`, `1/2 litro`).  
-- Si ambos productos contienen la misma cantidad de números, todos deben coincidir exactamente.  
-- Si la cantidad de números es distinta, al menos uno debe coincidir.  
-Esto ayuda a evitar comparar productos de diferentes tamaños o presentaciones (por ejemplo: `180 ml` vs `270 ml`, o `20 bolsitas` vs `50 bolsitas`).
+
+Los números de ambos productos deben coincidir.
+
+Los números entre paréntesis, como (1), que aparecen al copiar no se consideran.
+
 
 **5. Eliminación de variantes de sabor**  
 Se excluyen pares cuando se detecta una palabra única significativa (más de 3 letras) en uno de los nombres que no está presente en el otro.  

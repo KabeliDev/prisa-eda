@@ -28,17 +28,22 @@ def load_all_sheets(path, exclude_sheets=['Familia Corporativa']):
 def extract_good_numbers(text):
     """Extracts standalone numbers and dot-suffix numbers (e.g., GDO.1), excluding anything in parentheses."""
     text_clean = re.sub(r'\([^)]*\)', '', text) # remove number inside parenthesis
-    # fractions
 
+    # fractions
     fractions = re.findall(r'\b(\d+)\s*/\s*(\d+)\b', text_clean)
     fraction_values = [int(n) / int(d) for n, d in fractions if int(d) != 0]
     text_clean = re.sub(r'\b\d+\s*/\s*\d+\b', '', text_clean)  # remove fractions from text
+
+    # Extract and remove decimal numbers
+    decimal_numbers = re.findall(r'\b\d+\.\d+\b', text_clean)
+    decimal_values = list(map(float, decimal_numbers))
+    text_clean = re.sub(r'\b\d+\.\d+\b', '', text_clean)
 
     # standalone numbers
     standalone_numbers = re.findall(r'\b\d+\b', text_clean)
     after_letter = re.findall(r'(?<=[a-zA-Z])\d+', text_clean)
 
-    all_numbers = list(map(float, standalone_numbers  + after_letter)) + fraction_values
+    all_numbers = list(map(float, standalone_numbers  + after_letter)) + fraction_values + decimal_values
 
     return all_numbers
 
@@ -69,11 +74,7 @@ def find_similar_products(df, similarity_threshold=90):
 
                 nums2 = extract_good_numbers(row_j['Nombre SKU'])
 
-                if nums1 and nums2 and (
-                        (len(nums1) == len(nums2) and nums1 != nums2)
-                ):
-                    continue
-                if nums1 and nums2 and not set(nums1) & set(nums2):
+                if nums1 and nums2 and ( nums1 != nums2):
                     continue
 
                 similar_groups.append({
