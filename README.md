@@ -23,9 +23,12 @@ Los números entre paréntesis, como (1), que aparecen al copiar no se considera
 
 
 **5. Eliminación de variantes de sabor**  
-Se excluyen pares cuando se detecta una palabra única significativa (más de 3 letras) en uno de los nombres que no está presente en el otro.  
-La palabra no debe ser una abreviación del otro nombre.  
-Esto previene que se agrupen productos iguales pero con diferentes sabores o fragancias, como: `limón`, `menta`, `canela`, `caramelo`, `vainilla`, etc.
+Se excluyen pares cuando se detecta una palabra única significativa (normalmente de más de 3 letras) en uno de los nombres que no está presente en el otro.  
+La palabra no debe ser una abreviación o una forma plural del otro nombre.  
+
+Esto previene que se agrupen productos que son iguales en base, pero diferentes en sabor, fragancia o variante funcional, como: `limón`, `menta`, `canela`, `caramelo`, `vainilla`, etc.
+
+Por defecto se ignoran palabras de menos de 3 letras, salvo algunas excepciones relevantes como sabores cortos (`ajo`, `té`, `sal`) que están incluidas en una lista especial.
 
 ---
 
@@ -54,7 +57,7 @@ Estos errores son inevitables sin un modelo que entienda el contexto del lenguaj
 
 ### Resultados
 
-Hay 59 casos seguros donde los nombres diferentes corresponden al mismo producto
+Hay 58 casos seguros donde los nombres diferentes corresponden al mismo producto
 
 #### Principales causas de discrepancia en nombres
 

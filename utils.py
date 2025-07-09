@@ -27,26 +27,29 @@ def load_all_sheets(path, exclude_sheets=['Familia Corporativa']):
 
 
 def extract_good_numbers(text):
-    """Extracts standalone numbers and dot-suffix numbers (e.g., GDO.1), excluding anything in parentheses."""
-    text_clean = re.sub(r'\([^)]*\)', '', text) # remove number inside parenthesis
+    """Extracts all meaningful numbers, including fractions, decimals, and numbers inside letter combos like 180ML."""
+    text_clean = re.sub(r'\([^)]*\)', '', text)  # remove anything in parentheses
 
-    # fractions
+    # Extract and remove fractions like "1/2"
     fractions = re.findall(r'\b(\d+)\s*/\s*(\d+)\b', text_clean)
     fraction_values = [int(n) / int(d) for n, d in fractions if int(d) != 0]
-    text_clean = re.sub(r'\b\d+\s*/\s*\d+\b', '', text_clean)  # remove fractions from text
+    text_clean = re.sub(r'\b\d+\s*/\s*\d+\b', '', text_clean)
 
-    # Extract and remove decimal numbers
-    decimal_numbers = re.findall(r'\b\d+\.\d+\b', text_clean)
+    # Extract and remove decimal numbers like "3.5"
+    decimal_numbers = re.findall(r'\d+\.\d+', text_clean)
     decimal_values = list(map(float, decimal_numbers))
-    text_clean = re.sub(r'\b\d+\.\d+\b', '', text_clean)
+    text_clean = re.sub(r'\d+\.\d+', '', text_clean)
 
-    # standalone numbers
-    standalone_numbers = re.findall(r'\b\d+\b', text_clean)
+    # Extract embedded numbers like "180ML", "50g"
+    embedded_numbers = re.findall(r'\d+(?=[a-zA-Z])', text_clean)
+
     after_letter = re.findall(r'(?<=[a-zA-Z])\d+', text_clean)
 
-    all_numbers = list(map(float, standalone_numbers  + after_letter)) + fraction_values + decimal_values
+    standalone_numbers = re.findall(r'\b\d+\b', text_clean)
 
+    all_numbers = list(map(float, standalone_numbers + after_letter + embedded_numbers)) + fraction_values + decimal_values
     return all_numbers
+
 
 
 def find_similar_products(df, similarity_threshold=90):
@@ -93,14 +96,22 @@ def find_similar_products(df, similarity_threshold=90):
 
     return pd.DataFrame(similar_groups).sort_values(by="Similarity", ascending=False).reset_index(drop=True)
 
-
 def is_different_flavor(name1: str, name2: str, min_len: int = 4, max_sim: float = 0.6) -> bool:
+    FLAVOR_EXCEPTIONS = {"ajo", "té", "sal", "pic", "lim", "ají"}
     def clean_and_split(text):
-        return set([
-            word.lower()
-            for word in re.findall(r'\b\w+\b', text)
-            if len(word) >= min_len and not word.isdigit()
-        ])
+        # Replace common special symbols with letter approximations
+        replacements = {
+            "¥": "y",
+            "$": "s",
+            "€": "e",
+        }
+        for symbol, replacement in replacements.items():
+            text = text.replace(symbol, replacement)
+        words = re.findall(r'\b[\wÀ-ÿ]+\b', text.lower())
+
+        long_words = {w for w in words if len(w) >= min_len and not w.isdigit()}
+        short_words = {w for w in words if 0 < len(w) < min_len and not w.isdigit()}
+        return long_words, short_words
 
     def fuzzy_set_difference(set1, set2):
         unique = []
@@ -115,17 +126,31 @@ def is_different_flavor(name1: str, name2: str, min_len: int = 4, max_sim: float
                 unique.append(w1)
         return unique
 
-    tokens1 = clean_and_split(name1)
-    tokens2 = clean_and_split(name2)
+    tokens1, short1 = clean_and_split(name1)
+    tokens2, short2 = clean_and_split(name2)
+    # Add short flavor exceptions to the long token sets
+    tokens1 |= {w for w in short1 if w.lower() in FLAVOR_EXCEPTIONS}
+    tokens2 |= {w for w in short2 if w.lower() in FLAVOR_EXCEPTIONS}
 
     unique1 = fuzzy_set_difference(tokens1, tokens2)
     unique2 = fuzzy_set_difference(tokens2, tokens1)
+
+    # Remove short tokens from unique lists unless they are the only token
+    if len(unique1) == 1 and list(unique1)[0] in short1 and list(unique1)[0] not in FLAVOR_EXCEPTIONS:
+        unique1 = []
+    if len(unique2) == 1 and list(unique2)[0] in short2 and list(unique2)[0] not in FLAVOR_EXCEPTIONS:
+        unique2 = []
+    # if "BEBIDA ALOE VERA 500 ML PI¥A ALOE WIN" in name2+name1:
+    #     print(unique1, unique2)
+    #     print(name1, name2)
+    #     print("!")
 
     if len(unique1) == 1 and len(unique2) == 1:
         tok1 = unique1[0]
         tok2 = unique2[0]
         sim = SequenceMatcher(None, tok1, tok2).ratio()
         return sim < max_sim  # Very different, likely different flavors
+
     return False
 
 def remove_flavor_variants(df: pd.DataFrame) -> pd.DataFrame:
