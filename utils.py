@@ -3,6 +3,7 @@ import re
 from fuzzywuzzy import fuzz
 from itertools import combinations
 from difflib import SequenceMatcher
+from Levenshtein import distance as levenshtein_distance
 
 
 def normalize_text(text):
@@ -101,21 +102,31 @@ def is_different_flavor(name1: str, name2: str, min_len: int = 4, max_sim: float
             if len(word) >= min_len and not word.isdigit()
         ])
 
+    def fuzzy_set_difference(set1, set2):
+        unique = []
+        for w1 in set1:
+            found_similar = False
+            for w2 in set2:
+                max_allowed_edits = 1 if len(w1) <= 6 else 2
+                if levenshtein_distance(w1, w2) <= max_allowed_edits:
+                    found_similar = True
+                    break
+            if not found_similar:
+                unique.append(w1)
+        return unique
+
     tokens1 = clean_and_split(name1)
     tokens2 = clean_and_split(name2)
 
-    # Unique tokens in each name
-    unique1 = tokens1 - tokens2
-    unique2 = tokens2 - tokens1
+    unique1 = fuzzy_set_difference(tokens1, tokens2)
+    unique2 = fuzzy_set_difference(tokens2, tokens1)
 
-    # Check if there's exactly one unique token on each side
     if len(unique1) == 1 and len(unique2) == 1:
-        tok1 = next(iter(unique1))
-        tok2 = next(iter(unique2))
+        tok1 = unique1[0]
+        tok2 = unique2[0]
         sim = SequenceMatcher(None, tok1, tok2).ratio()
         return sim < max_sim  # Very different, likely different flavors
     return False
-
 
 def remove_flavor_variants(df: pd.DataFrame) -> pd.DataFrame:
     mask = df.apply(
