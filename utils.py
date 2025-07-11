@@ -52,7 +52,9 @@ def extract_good_numbers(text):
 
 
 
-def find_similar_products(df, similarity_threshold=90):
+def find_similar_products(df, similarity_threshold=90, different_sku=True):
+    """different_sku = true -- if we find similar products with different skus
+    if false find with the same sku"""
     df['Norm Name'] = df['Nombre SKU'].apply(normalize_text)
     df['Marca'] = df['Marca'].str.strip().str.upper()
 
@@ -73,7 +75,9 @@ def find_similar_products(df, similarity_threshold=90):
             name2 = row_j['Norm Name']
             sim = fuzz.token_sort_ratio(name1, name2)
 
-            if sim >= similarity_threshold and row_i['SKU'] != row_j['SKU']:
+            condition = row_i['SKU'] != row_j['SKU'] if different_sku else row_i['SKU'] == row_j['SKU']
+
+            if sim >= similarity_threshold and condition:
                 nums1 = extract_good_numbers(row_i['Nombre SKU'])
 
                 nums2 = extract_good_numbers(row_j['Nombre SKU'])
@@ -101,7 +105,7 @@ def is_different_flavor(name1: str, name2: str, min_len: int = 4, max_sim: float
     def clean_and_split(text):
         # Replace common special symbols with letter approximations
         replacements = {
-            "¥": "y",
+            "¥": "n", # like in word pina, which was written incorrectly with that symbol
             "$": "s",
             "€": "e",
         }
@@ -140,10 +144,6 @@ def is_different_flavor(name1: str, name2: str, min_len: int = 4, max_sim: float
         unique1 = []
     if len(unique2) == 1 and list(unique2)[0] in short2 and list(unique2)[0] not in FLAVOR_EXCEPTIONS:
         unique2 = []
-    # if "BEBIDA ALOE VERA 500 ML PI¥A ALOE WIN" in name2+name1:
-    #     print(unique1, unique2)
-    #     print(name1, name2)
-    #     print("!")
 
     if len(unique1) == 1 and len(unique2) == 1:
         tok1 = unique1[0]
@@ -181,7 +181,6 @@ def process_excel_for_duplicates(
     similar_df = similar_df.copy()
     similar_df = remove_flavor_variants(similar_df)
 
-    # too_close_df = similar_df[similar_df.apply(is_sku_too_close, axis=1)]
     filtered_df = similar_df[~similar_df.apply(is_sku_too_close, axis=1)]
 
     confident_df = filtered_df[filtered_df['Similarity'] >= confidence_threshold]
@@ -190,7 +189,6 @@ def process_excel_for_duplicates(
             (filtered_df['Similarity'] >= low_confidence_threshold) &
             (filtered_df['Similarity'] < confidence_threshold)
         ],
-        # too_close_df
     ], ignore_index=True)
 
     confident_df = confident_df.sort_values(by='Similarity', ascending=False).reset_index(drop=True)
