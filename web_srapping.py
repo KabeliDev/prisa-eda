@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import traceback
@@ -11,10 +10,6 @@ import requests
 
 def search_product_url(base_url, product_code):
     options = webdriver.ChromeOptions()
-    # options.add_argument("--window-size=1920,1080")
-    # options.add_argument("--no-sandbox")
-    # options.add_argument("--disable-gpu")
-    # options.add_argument("--disable-software-rasterizer")
     driver = webdriver.Chrome(options=options)
 
     try:
