@@ -47,9 +47,9 @@ def extract_good_numbers(text):
 
     standalone_numbers = re.findall(r'\b\d+\b', text_clean)
 
-    all_numbers = list(map(float, standalone_numbers + after_letter + embedded_numbers)) + fraction_values + decimal_values
+    all_numbers = list(
+        map(float, standalone_numbers + after_letter + embedded_numbers)) + fraction_values + decimal_values
     return all_numbers
-
 
 
 def find_similar_products(df, similarity_threshold=90, different_sku=True):
@@ -62,7 +62,6 @@ def find_similar_products(df, similarity_threshold=90, different_sku=True):
 
     for marca in df['Marca'].unique():
         sub_df = df[df['Marca'] == marca]
-
 
         for i, j in combinations(range(len(sub_df)), 2):
             row_i = sub_df.iloc[i]
@@ -82,7 +81,7 @@ def find_similar_products(df, similarity_threshold=90, different_sku=True):
 
                 nums2 = extract_good_numbers(row_j['Nombre SKU'])
 
-                if nums1 and nums2 and ( nums1 != nums2):
+                if nums1 and nums2 and (nums1 != nums2):
                     continue
 
                 similar_groups.append({
@@ -100,12 +99,14 @@ def find_similar_products(df, similarity_threshold=90, different_sku=True):
 
     return pd.DataFrame(similar_groups).sort_values(by="Similarity", ascending=False).reset_index(drop=True)
 
+
 def is_different_flavor(name1: str, name2: str, min_len: int = 4, max_sim: float = 0.6) -> bool:
     FLAVOR_EXCEPTIONS = {"ajo", "té", "sal", "pic", "lim", "ají"}
+
     def clean_and_split(text):
         # Replace common special symbols with letter approximations
         replacements = {
-            "¥": "n", # like in word pina, which was written incorrectly with that symbol
+            "¥": "n",  # like in word pina, which was written incorrectly with that symbol
             "$": "s",
             "€": "e",
         }
@@ -153,6 +154,7 @@ def is_different_flavor(name1: str, name2: str, min_len: int = 4, max_sim: float
 
     return False
 
+
 def remove_flavor_variants(df: pd.DataFrame) -> pd.DataFrame:
     mask = df.apply(
         lambda row: is_different_flavor(row["Nombre SKU 1"], row["Nombre SKU 2"]),
@@ -169,9 +171,9 @@ def is_sku_too_close(row):
 
 
 def process_excel_for_duplicates(
-    excel_path,
-    confidence_threshold=93,
-    low_confidence_threshold=90
+        excel_path,
+        confidence_threshold=93,
+        low_confidence_threshold=90
 ):
     df_all = load_all_sheets(excel_path)
     similar_df = find_similar_products(df_all, similarity_threshold=low_confidence_threshold)
@@ -188,7 +190,7 @@ def process_excel_for_duplicates(
         filtered_df[
             (filtered_df['Similarity'] >= low_confidence_threshold) &
             (filtered_df['Similarity'] < confidence_threshold)
-        ],
+            ],
     ], ignore_index=True)
 
     confident_df = confident_df.sort_values(by='Similarity', ascending=False).reset_index(drop=True)
@@ -198,11 +200,12 @@ def process_excel_for_duplicates(
 
 
 def process_excel_for_duplicates_and_split_by_company(
-    excel_path,
-    confidence_threshold=93,
-    low_confidence_threshold=88
+        excel_path,
+        confidence_threshold=93,
+        low_confidence_threshold=88
 ):
     """Group by subcompany"""
+    full_data = load_all_sheets(excel_path)
     confident, needs_review = process_excel_for_duplicates(
         excel_path,
         confidence_threshold=confidence_threshold,
@@ -218,15 +221,16 @@ def process_excel_for_duplicates_and_split_by_company(
     for company in all_companies:
         confident_rows = confident[
             (confident["Sheet 1"] == company) | (confident["Sheet 2"] == company)
-        ]
+            ]
         review_rows = needs_review[
             (needs_review["Sheet 1"] == company) | (needs_review["Sheet 2"] == company)
-        ]
+            ]
 
         grouped_confident[company] = confident_rows
         grouped_review[company] = review_rows
 
     return grouped_confident, grouped_review
+
 
 def split_matches_by_company(exact_df, partial_df):
     """Group by subcompany"""
@@ -241,10 +245,58 @@ def split_matches_by_company(exact_df, partial_df):
     for company in all_companies:
         grouped_exact[company] = exact_df[
             (exact_df["Sheet 1"] == company) | (exact_df["Sheet 2"] == company)
-        ]
+            ]
         grouped_partial[company] = partial_df[
             (partial_df["Sheet 1"] == company) | (partial_df["Sheet 2"] == company)
-        ]
+            ]
 
     return grouped_exact, grouped_partial
 
+
+def subtract_table(df_all, confident):
+    confident_pairs_1 = list(zip(confident['Marca'], confident['SKU 1']))
+    confident_pairs_2 = list(zip(confident['Marca'], confident['SKU 2']))
+
+    confident_pairs_set = set(confident_pairs_1 + confident_pairs_2)
+    filtered_df = df_all[~df_all.apply(lambda row: (row['Marca'], row['SKU']) in confident_pairs_set, axis=1)]
+    return filtered_df
+
+
+def split_dataframe_by_sheet(df):
+    grouped_dfs = {sheet: group.reset_index(drop=True) for sheet, group in df.groupby("Sheet")}
+    return grouped_dfs
+
+def find_normal_cases(excel_path):
+    df_all = load_all_sheets(excel_path)
+    data = load_all_sheets(excel_path)
+
+    correct_products = find_similar_products(data, 90, different_sku=False)
+    correct_products = correct_products.copy()
+    correct_products = remove_flavor_variants(correct_products)
+    columns_to_show = [col for col in correct_products.columns if col not in ['Numbers 1', 'Numbers 2']]
+    correct_products = correct_products.loc[:, columns_to_show]
+    exact_matches = correct_products[correct_products['Similarity'] == 100]
+    partial_matches = correct_products[correct_products['Similarity'] < 100]
+    confident, needs_review = process_excel_for_duplicates(
+        excel_path,
+        confidence_threshold=93,
+        low_confidence_threshold=88
+    )
+    filtered = subtract_table(df_all, confident)
+    filtered = subtract_table(filtered, needs_review)
+    filtered = subtract_table(filtered, exact_matches)
+    filtered = subtract_table(filtered, partial_matches)
+
+
+    return filtered
+
+
+def append_row_counts(d, sheet_dfs):
+
+    for sheet_name in d:
+        if sheet_name in sheet_dfs:
+            row_count = sheet_dfs[sheet_name].shape[0]
+            d[sheet_name].append(row_count)
+        else:
+            print(f"Warning: {sheet_name} not found in sheet_dfs")
+    return d

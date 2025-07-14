@@ -79,3 +79,9 @@ Hay 58 casos seguros donde los nombres diferentes corresponden al mismo producto
 
 - **Diferencias menores aceptables en ortografía/plural:**  
   Ejemplo: `"lomito"` vs `"lomitos"`
+
+
+
+### Errores
+
+12596 cafe Nescafe - tiene un error en el tamaño (400 en vez de 420)
