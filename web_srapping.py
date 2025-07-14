@@ -5,6 +5,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import traceback
 import time
+import os
+import requests
 
 
 def search_product_url(base_url, product_code):
@@ -47,8 +49,34 @@ def search_product_url(base_url, product_code):
         driver.quit()
 
 
+def download_and_save(folder, product_code, url):
+    os.makedirs(folder, exist_ok=True)
+    response = requests.get(url)
+    filename = f"{str(product_code)}.png"
+    filepath = os.path.join(LOCAL_FOLDER, filename)
+
+    if response.status_code == 200:
+        with open(filepath, "wb") as f:
+            f.write(response.content)
+        print(f"Image saved to {filepath}")
+    else:
+        print(f"Failed to download image. Status code: {response.status_code}")
+
+
+
 if __name__ == "__main__":
     base_url = "https://www.prisa.cl"
     product_code = "89295"
     result = search_product_url(base_url, product_code)
     print("Resultado:", result)
+
+    LOCAL_FOLDER = "/home/viktoria/Downloads/images"
+    download_and_save(LOCAL_FOLDER, product_code, result)
+
+    code = 12596
+    result = search_product_url(base_url, code)
+    download_and_save(LOCAL_FOLDER, code, result)
+
+    code = 99840
+    result = search_product_url(base_url, code)
+    download_and_save(LOCAL_FOLDER, code, result)
