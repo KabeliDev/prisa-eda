@@ -196,3 +196,55 @@ def process_excel_for_duplicates(
 
     return confident_df, needs_review_df
 
+
+def process_excel_for_duplicates_and_split_by_company(
+    excel_path,
+    confidence_threshold=93,
+    low_confidence_threshold=88
+):
+    """Group by subcompany"""
+    confident, needs_review = process_excel_for_duplicates(
+        excel_path,
+        confidence_threshold=confidence_threshold,
+        low_confidence_threshold=low_confidence_threshold
+    )
+    all_companies = pd.unique(
+        pd.concat([confident["Sheet 1"], confident["Sheet 2"]], ignore_index=True)
+    )
+
+    grouped_confident = {}
+    grouped_review = {}
+
+    for company in all_companies:
+        confident_rows = confident[
+            (confident["Sheet 1"] == company) | (confident["Sheet 2"] == company)
+        ]
+        review_rows = needs_review[
+            (needs_review["Sheet 1"] == company) | (needs_review["Sheet 2"] == company)
+        ]
+
+        grouped_confident[company] = confident_rows
+        grouped_review[company] = review_rows
+
+    return grouped_confident, grouped_review
+
+def split_matches_by_company(exact_df, partial_df):
+    """Group by subcompany"""
+    all_companies = pd.unique(
+        pd.concat([exact_df["Sheet 1"], exact_df["Sheet 2"],
+                   partial_df["Sheet 1"], partial_df["Sheet 2"]], ignore_index=True)
+    )
+
+    grouped_exact = {}
+    grouped_partial = {}
+
+    for company in all_companies:
+        grouped_exact[company] = exact_df[
+            (exact_df["Sheet 1"] == company) | (exact_df["Sheet 2"] == company)
+        ]
+        grouped_partial[company] = partial_df[
+            (partial_df["Sheet 1"] == company) | (partial_df["Sheet 2"] == company)
+        ]
+
+    return grouped_exact, grouped_partial
+
