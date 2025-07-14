@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 
 
-def visualize(different_sku_review_count, different_sku_conf_count, same_name_same_sku_count, similar_name_same_sku_count):
+def visualize(different_sku_review_count, different_sku_conf_count, same_name_same_sku_count, similar_name_same_sku_count, additional_name=None):
     labels = [
         'Productos distintos con distinto SKU\n(subempresas)',
         'Nombre y SKU exactamente iguales',
@@ -29,7 +29,10 @@ def visualize(different_sku_review_count, different_sku_conf_count, same_name_sa
 
     # Add labels and title
     ax.set_ylabel('Cantidad de coincidencias')
-    ax.set_title('Resumen de coincidencias entre subempresas')
+    if additional_name:
+        ax.set_title(f'Resumen de coincidencias entre subempresas para {additional_name}')
+    else:
+        ax.set_title('Resumen de coincidencias entre subempresas')
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=10, ha='center')
     ax.legend()

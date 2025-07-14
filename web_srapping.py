@@ -19,6 +19,7 @@ def search_product_url(base_url, product_code):
         driver.get(base_url)
 
         wait = WebDriverWait(driver, 15)
+        time.sleep(10)
 
         # Hacer clic en el ícono de búsqueda
         input_search = wait.until(
@@ -32,11 +33,11 @@ def search_product_url(base_url, product_code):
 
         exist_product = wait.until(EC.visibility_of_element_located((
             By.XPATH,
-            f'//span[normalize-space(text())="Código {product_code}"]'
+            f'//span[normalize-space(text())="Código {product_code}"]/../../../../..//a//img'
         )))
 
-        time.sleep(10)
-        return exist_product
+        time.sleep(5)
+        return exist_product.get_attribute("src")
 
     except Exception as e:
         print("Error:", traceback.format_exc())
