@@ -44,11 +44,11 @@ def search_product_url(base_url, product_code):
         driver.quit()
 
 
-def download_and_save(folder, product_code, url):
+def download_and_save(folder, product_code, url, local_folder):
     os.makedirs(folder, exist_ok=True)
     response = requests.get(url)
     filename = f"{str(product_code)}.png"
-    filepath = os.path.join(LOCAL_FOLDER, filename)
+    filepath = os.path.join(local_folder, filename)
 
     if response.status_code == 200:
         with open(filepath, "wb") as f:
@@ -66,12 +66,12 @@ if __name__ == "__main__":
     print("Resultado:", result)
 
     LOCAL_FOLDER = "/home/viktoria/Downloads/images"
-    download_and_save(LOCAL_FOLDER, product_code, result)
+    download_and_save(LOCAL_FOLDER, product_code, result, LOCAL_FOLDER)
 
     code = 12596
     result = search_product_url(base_url, code)
-    download_and_save(LOCAL_FOLDER, code, result)
+    download_and_save(LOCAL_FOLDER, code, result, LOCAL_FOLDER)
 
     code = 99840
     result = search_product_url(base_url, code)
-    download_and_save(LOCAL_FOLDER, code, result)
+    download_and_save(LOCAL_FOLDER, code, result, LOCAL_FOLDER)

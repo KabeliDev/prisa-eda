@@ -83,5 +83,4 @@ Hay 58 casos seguros donde los nombres diferentes corresponden al mismo producto
 
 
 ### Errores
-
-12596 cafe Nescafe - tiene un error en el tamaño (400 en vez de 420)
+SKU 12596, café Nescafé – tiene un error en el tamaño (la imagen muestra un tarro de 400 en vez de 420)

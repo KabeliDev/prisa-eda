@@ -266,11 +266,12 @@ def split_dataframe_by_sheet(df):
     grouped_dfs = {sheet: group.reset_index(drop=True) for sheet, group in df.groupby("Sheet")}
     return grouped_dfs
 
+
 def find_normal_cases(excel_path):
     df_all = load_all_sheets(excel_path)
     data = load_all_sheets(excel_path)
 
-    correct_products = find_similar_products(data, 90, different_sku=False)
+    correct_products = find_similar_products(data, 50, different_sku=False)
     correct_products = correct_products.copy()
     correct_products = remove_flavor_variants(correct_products)
     columns_to_show = [col for col in correct_products.columns if col not in ['Numbers 1', 'Numbers 2']]
@@ -280,19 +281,17 @@ def find_normal_cases(excel_path):
     confident, needs_review = process_excel_for_duplicates(
         excel_path,
         confidence_threshold=93,
-        low_confidence_threshold=88
+        low_confidence_threshold=50
     )
     filtered = subtract_table(df_all, confident)
     filtered = subtract_table(filtered, needs_review)
     filtered = subtract_table(filtered, exact_matches)
     filtered = subtract_table(filtered, partial_matches)
 
-
     return filtered
 
 
 def append_row_counts(d, sheet_dfs):
-
     for sheet_name in d:
         if sheet_name in sheet_dfs:
             row_count = sheet_dfs[sheet_name].shape[0]
@@ -300,3 +299,23 @@ def append_row_counts(d, sheet_dfs):
         else:
             print(f"Warning: {sheet_name} not found in sheet_dfs")
     return d
+
+
+def pairs_to_unique_products(table):
+    """Receives dict of dfs for each subcompany with pairs of products
+    Returns dict of dfs for each subcompany with unique products
+    """
+    products_grouped_review = {}
+
+    for company, df in table.items():
+        df1 = df[['Marca', 'Nombre SKU 1', 'SKU 1', 'Sheet 1']].copy()
+        df1.columns = ['Marca', 'Nombre SKU', 'SKU', 'Sheet']
+
+        df2 = df[['Marca', 'Nombre SKU 2', 'SKU 2', 'Sheet 2']].copy()
+        df2.columns = ['Marca', 'Nombre SKU', 'SKU', 'Sheet']
+
+        combined = pd.concat([df1, df2], ignore_index=True)
+        filtered = combined[combined['Sheet'] == company].reset_index(drop=True)
+        filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU']).reset_index(drop=True)
+        products_grouped_review[company] = filtered
+    return products_grouped_review
