@@ -10,9 +10,9 @@ def visualize(
         additional_name=None
 ):
     labels = [
-        'Nombres distintos (productos iguales) con SKUs distintos\n(subempresas)',
         'Nombres y SKUs exactamente iguales',
         'Nombres similares con SKUs iguales',
+        'Nombres distintos (productos iguales) con SKUs distintos\n(subempresas)',
         'Nombres distintos (productos distintos) con SKUs distintos'
     ]
 
@@ -24,10 +24,10 @@ def visualize(
 
     ax.bar(0, same_name_same_sku_count, color='blue')
     ax.bar(1, similar_name_same_sku_count, color='purple')
-    ax.bar(2, different_sku_review_count, label='100% iguales', color='green')
+    ax.bar(2, different_sku_review_count, label='Con duda, > 88 % de similitud', color='green')
     ax.bar(2, different_sku_conf_count, bottom=different_sku_review_count,
-           label='Con duda, > 88 % de similitud', color='orange')
-    ax.bar(3, diffrent_sku_different_prod, color='red', label='Productos totalmente distintos')
+           label='100% iguales', color='orange')
+    ax.bar(3, diffrent_sku_different_prod, color='red')
 
     ax.set_ylabel('Cantidad de coincidencias')
     if additional_name:
@@ -44,5 +44,36 @@ def visualize(
     ax.text(2, group1_total / 2, str(group1_total), ha='center', va='center')
     ax.text(3, diffrent_sku_different_prod / 2, str(diffrent_sku_different_prod), ha='center', va='center')
 
+    plt.tight_layout()
+    plt.show()
+
+
+
+def graficar_distribucion_productos(dictionary):
+    """
+    Un gráfico que muestra en cuántas subempresas aparecen productos duplicados.
+    """
+    empresas = sorted(dictionary.keys())
+    productos = [dictionary[e] for e in empresas]
+
+    etiquetas = [f"{e} empresa" if e == 1 else f"{e} empresas" for e in empresas]
+
+    plt.figure(figsize=(8, 6))
+    bars = plt.bar(etiquetas, productos, color='skyblue', edgecolor='black')
+
+    # Dejar espacio arriba ajustando el límite del eje Y
+    max_height = max(productos)
+    plt.ylim(0, max_height * 1.15)  # 15% de espacio extra arriba
+
+    # Etiquetas encima de cada barra
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2, height + (max_height * 0.01), str(height),
+                 ha='center', va='bottom', fontsize=10)
+
+    plt.title("Distribución de productos duplicados según el número de empresas en que aparecen", fontsize=14)
+    plt.xlabel("Número de empresas", fontsize=12)
+    plt.ylabel("Cantidad de productos únicos", fontsize=12)
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
     plt.tight_layout()
     plt.show()

@@ -4,6 +4,8 @@ from fuzzywuzzy import fuzz
 from itertools import combinations
 from difflib import SequenceMatcher
 from Levenshtein import distance as levenshtein_distance
+from collections import defaultdict
+import networkx as nx
 
 
 def normalize_text(text):
@@ -254,6 +256,7 @@ def split_matches_by_company(exact_df, partial_df):
 
 
 def subtract_table(df_all, confident):
+    """find samples from df_all that are not present in other df confident"""
     confident_pairs_1 = list(zip(confident['Marca'], confident['SKU 1']))
     confident_pairs_2 = list(zip(confident['Marca'], confident['SKU 2']))
 
@@ -262,12 +265,8 @@ def subtract_table(df_all, confident):
     return filtered_df
 
 
-def split_dataframe_by_sheet(df):
-    grouped_dfs = {sheet: group.reset_index(drop=True) for sheet, group in df.groupby("Sheet")}
-    return grouped_dfs
-
-
 def find_normal_cases(excel_path):
+    """Finds products that do not have similar by name, sku products in other companies as products that are nor belong to other categories"""
     df_all = load_all_sheets(excel_path)
     data = load_all_sheets(excel_path)
 
@@ -291,16 +290,6 @@ def find_normal_cases(excel_path):
     return filtered
 
 
-def append_row_counts(d, sheet_dfs):
-    for sheet_name in d:
-        if sheet_name in sheet_dfs:
-            row_count = sheet_dfs[sheet_name].shape[0]
-            d[sheet_name].append(row_count)
-        else:
-            print(f"Warning: {sheet_name} not found in sheet_dfs")
-    return d
-
-
 def pairs_to_unique_products(table):
     """Receives dict of dfs for each subcompany with pairs of products
     Returns dict of dfs for each subcompany with unique products
@@ -319,3 +308,59 @@ def pairs_to_unique_products(table):
         filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU']).reset_index(drop=True)
         products_grouped_review[company] = filtered
     return products_grouped_review
+
+
+def count_unique_subempresas_per_product(df):
+    """
+    For each product (Nombre SKU, SKU), count how many unique subcompanies (sheets) it appears in
+    Products that are matched (appear in same row) are considered part of the same group.
+    Use graph to register connection between related products
+    """
+
+    G = nx.Graph()
+
+    for _, row in df.iterrows():
+        prod1 = (row['Nombre SKU 1'], row['SKU 1'])
+        prod2 = (row['Nombre SKU 2'], row['SKU 2'])
+        G.add_edge(prod1, prod2)
+
+    product_groups = list(nx.connected_components(G))
+
+    product_to_sheets = defaultdict(set)
+
+    for _, row in df.iterrows():
+        prod1 = (row['Nombre SKU 1'], row['SKU 1'])
+        prod2 = (row['Nombre SKU 2'], row['SKU 2'])
+
+        product_to_sheets[prod1].add(row['Sheet 1'])
+        product_to_sheets[prod2].add(row['Sheet 2'])
+
+    result = {}
+
+    for group in product_groups:
+        all_sheets = set()
+        for product in group:
+            all_sheets.update(product_to_sheets[product])
+
+        for product in group:
+            result[product] = len(all_sheets)
+
+    return result
+
+
+def count_product_distribution_dict_only(product_company_counts):
+    """Create a dict
+    product: how many matches it has in other subcompanies"""
+    statistics = defaultdict(int)
+    cnt = 0
+    counted = False
+    for (name, sku), count in product_company_counts.items():
+        # print(f"Product: {name} | SKU: {sku} | Count: {count}")
+        if counted and cnt > 0:
+            cnt -= 1
+        else:
+            counted = True
+            cnt = count - 1
+            statistics[count] += 1
+
+    return statistics
