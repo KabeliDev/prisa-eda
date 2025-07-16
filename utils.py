@@ -296,7 +296,22 @@ def pairs_to_unique_products(table):
     """
     products_grouped_review = {}
 
-    for company, df in table.items():
+    if isinstance(table, dict):
+        for company, df in table.items():
+            df1 = df[['Marca', 'Nombre SKU 1', 'SKU 1', 'Sheet 1']].copy()
+            df1.columns = ['Marca', 'Nombre SKU', 'SKU', 'Sheet']
+
+            df2 = df[['Marca', 'Nombre SKU 2', 'SKU 2', 'Sheet 2']].copy()
+            df2.columns = ['Marca', 'Nombre SKU', 'SKU', 'Sheet']
+
+            combined = pd.concat([df1, df2], ignore_index=True)
+            filtered = combined[combined['Sheet'] == company].reset_index(drop=True)
+            filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU']).reset_index(drop=True)
+            products_grouped_review[company] = filtered
+    else:
+        # if there is one table
+        df = table
+
         df1 = df[['Marca', 'Nombre SKU 1', 'SKU 1', 'Sheet 1']].copy()
         df1.columns = ['Marca', 'Nombre SKU', 'SKU', 'Sheet']
 
@@ -304,9 +319,10 @@ def pairs_to_unique_products(table):
         df2.columns = ['Marca', 'Nombre SKU', 'SKU', 'Sheet']
 
         combined = pd.concat([df1, df2], ignore_index=True)
-        filtered = combined[combined['Sheet'] == company].reset_index(drop=True)
+        filtered = combined.reset_index(drop=True)
         filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU']).reset_index(drop=True)
-        products_grouped_review[company] = filtered
+        return filtered
+
     return products_grouped_review
 
 
