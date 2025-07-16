@@ -49,7 +49,7 @@ def visualize(
 
 
 
-def graficar_distribucion_productos(dictionary):
+def graficar_distribucion_productos(dictionary, color):
     """
     Un gráfico que muestra en cuántas subempresas aparecen productos duplicados.
     """
@@ -59,7 +59,7 @@ def graficar_distribucion_productos(dictionary):
     etiquetas = [f"{e} empresa" if e == 1 else f"{e} empresas" for e in empresas]
 
     plt.figure(figsize=(8, 6))
-    bars = plt.bar(etiquetas, productos, color='skyblue', edgecolor='black')
+    bars = plt.bar(etiquetas, productos, color=color, edgecolor='black')
 
     # Dejar espacio arriba ajustando el límite del eje Y
     max_height = max(productos)
