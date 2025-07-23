@@ -6,6 +6,7 @@ from difflib import SequenceMatcher
 from Levenshtein import distance as levenshtein_distance
 from collections import defaultdict
 import networkx as nx
+from itertools import combinations
 
 
 def normalize_text(text):
@@ -54,11 +55,28 @@ def extract_good_numbers(text):
     return all_numbers
 
 
+def find_internal_duplicates(df):
+    """
+    Finds products from the same subempresa with the same SKU.
+    """
+    duplicates = (
+        df.groupby(['Sheet', 'SKU', 'Nombre SKU'])
+        .filter(lambda x: len(x) > 1)
+        .sort_values(['Sheet', 'SKU'])
+    )
+    return duplicates.reset_index(drop=True)
+
+
 def find_similar_products(df, similarity_threshold=90, different_sku=True):
     """different_sku = true -- if we find similar products with different skus
     if false find with the same sku"""
     df['Norm Name'] = df['Nombre SKU'].apply(normalize_text)
     df['Marca'] = df['Marca'].str.strip().str.upper()
+
+    # Identify internal duplicates to ignore
+    internal_duplicates = find_internal_duplicates(df)
+    internal_keys = set(zip(internal_duplicates['Sheet'], internal_duplicates['SKU']))
+    df = df[~df.apply(lambda row: (row['Sheet'], row['SKU']) in internal_keys, axis=1)].copy()
 
     similar_groups = []
 
@@ -269,8 +287,10 @@ def find_normal_cases(excel_path):
     """Finds products that do not have similar by name, sku products in other companies as products that are nor belong to other categories"""
     df_all = load_all_sheets(excel_path)
     data = load_all_sheets(excel_path)
+    duplicates = find_internal_duplicates(df_all)
+    duplicates_pairs = set(zip(duplicates['Marca'], duplicates['SKU'], duplicates['Nombre SKU']))
 
-    correct_products = find_similar_products(data, 50, different_sku=False)
+    correct_products = find_similar_products(data, 88, different_sku=False)
     correct_products = correct_products.copy()
     correct_products = remove_flavor_variants(correct_products)
     columns_to_show = [col for col in correct_products.columns if col not in ['Numbers 1', 'Numbers 2']]
@@ -280,12 +300,13 @@ def find_normal_cases(excel_path):
     confident, needs_review = process_excel_for_duplicates(
         excel_path,
         confidence_threshold=93,
-        low_confidence_threshold=50
+        low_confidence_threshold=85
     )
     filtered = subtract_table(df_all, confident)
     filtered = subtract_table(filtered, needs_review)
     filtered = subtract_table(filtered, exact_matches)
     filtered = subtract_table(filtered, partial_matches)
+    filtered = filtered[~filtered.apply(lambda row: (row['Marca'], row['SKU']) in duplicates_pairs, axis=1)]
 
     return filtered
 
@@ -380,3 +401,50 @@ def count_product_distribution_dict_only(product_company_counts):
             statistics[count] += 1
 
     return statistics
+
+
+def count_unique_products_per_sheet(exact_match_df):
+    all_products = []
+
+    for i in range(len(exact_match_df)):
+        row = exact_match_df.iloc[i]
+        all_products.append((row['Sheet 1'], row['SKU 1'], row['Nombre SKU 1']))
+        all_products.append((row['Sheet 2'], row['SKU 2'], row['Nombre SKU 2']))
+
+    product_df = pd.DataFrame(all_products, columns=["Sheet", "SKU", "Nombre SKU"])
+
+    # Drop duplicates by Sheet + SKU
+    unique_df = product_df.drop_duplicates(subset=["Sheet", "SKU", "Nombre SKU"])
+
+    # Count unique SKUs per sheet
+    counts = unique_df.groupby("Sheet")["SKU"].nunique().to_dict()
+
+    return counts
+
+
+
+
+def find_common_products(dfs, df_names=None):
+    """
+    Given a list of DataFrames with columns ['Sheet', 'SKU'],
+    prints out which pairs share common products.
+    """
+    if df_names is None:
+        df_names = [f"df_{i}" for i in range(len(dfs))]
+
+
+    standardized_dfs = []
+    for df in dfs:
+        df_std = df.rename(columns={"Subempresa": "Sheet"})[["Sheet", "SKU", "Marca", "Nombre SKU"]].drop_duplicates()
+        standardized_dfs.append(df_std)
+
+    for (i, j) in combinations(range(len(standardized_dfs)), 2):
+        df1, name1 = standardized_dfs[i], df_names[i]
+        df2, name2 = standardized_dfs[j], df_names[j]
+
+        merged = df1.merge(df2, on=["Sheet", "SKU", "Marca", "Nombre SKU"], how="inner")
+        if not merged.empty:
+            print(f"✅ Common products between {name1} and {name2}: {len(merged)}")
+            return merged
+        else:
+            print(f"❌ No common products between {name1} and {name2}")
