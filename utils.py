@@ -73,11 +73,6 @@ def find_similar_products(df, similarity_threshold=90, different_sku=True):
     df['Norm Name'] = df['Nombre SKU'].apply(normalize_text)
     df['Marca'] = df['Marca'].str.strip().str.upper()
 
-    # Identify internal duplicates to ignore
-    internal_duplicates = find_internal_duplicates(df)
-    internal_keys = set(zip(internal_duplicates['Sheet'], internal_duplicates['SKU']))
-    df = df[~df.apply(lambda row: (row['Sheet'], row['SKU']) in internal_keys, axis=1)].copy()
-
     similar_groups = []
 
     for marca in df['Marca'].unique():
@@ -275,20 +270,17 @@ def split_matches_by_company(exact_df, partial_df):
 
 def subtract_table(df_all, confident):
     """find samples from df_all that are not present in other df confident"""
-    confident_pairs_1 = list(zip(confident['Marca'], confident['SKU 1']))
-    confident_pairs_2 = list(zip(confident['Marca'], confident['SKU 2']))
+    confident_pairs_1 = list(zip(confident['Marca'], confident['Nombre SKU 1'], confident['SKU 1']))
+    confident_pairs_2 = list(zip(confident['Marca'],confident['Nombre SKU 2'],  confident['SKU 2']))
 
     confident_pairs_set = set(confident_pairs_1 + confident_pairs_2)
-    filtered_df = df_all[~df_all.apply(lambda row: (row['Marca'], row['SKU']) in confident_pairs_set, axis=1)]
+    filtered_df = df_all[~df_all.apply(lambda row: (row['Marca'], row['SKU'], row["Nombre SKU"]) in confident_pairs_set, axis=1)]
     return filtered_df
 
 
 def find_normal_cases(excel_path):
     """Finds products that do not have similar by name, sku products in other companies as products that are nor belong to other categories"""
-    df_all = load_all_sheets(excel_path)
     data = load_all_sheets(excel_path)
-    duplicates = find_internal_duplicates(df_all)
-    duplicates_pairs = set(zip(duplicates['Marca'], duplicates['SKU'], duplicates['Nombre SKU']))
 
     correct_products = find_similar_products(data, 88, different_sku=False)
     correct_products = correct_products.copy()
@@ -302,12 +294,11 @@ def find_normal_cases(excel_path):
         confidence_threshold=93,
         low_confidence_threshold=85
     )
+    df_all = load_all_sheets(excel_path)
     filtered = subtract_table(df_all, confident)
     filtered = subtract_table(filtered, needs_review)
     filtered = subtract_table(filtered, exact_matches)
     filtered = subtract_table(filtered, partial_matches)
-    filtered = filtered[~filtered.apply(lambda row: (row['Marca'], row['SKU']) in duplicates_pairs, axis=1)]
-
     return filtered
 
 
@@ -327,7 +318,7 @@ def pairs_to_unique_products(table):
 
             combined = pd.concat([df1, df2], ignore_index=True)
             filtered = combined[combined['Sheet'] == company].reset_index(drop=True)
-            filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU']).reset_index(drop=True)
+            filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU', "Sheet"]).reset_index(drop=True)
             products_grouped_review[company] = filtered
     else:
         # if there is one table
@@ -341,7 +332,7 @@ def pairs_to_unique_products(table):
 
         combined = pd.concat([df1, df2], ignore_index=True)
         filtered = combined.reset_index(drop=True)
-        filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU']).reset_index(drop=True)
+        filtered = filtered.drop_duplicates(subset=['Marca', 'Nombre SKU', 'SKU', "Sheet"]).reset_index(drop=True)
         return filtered
 
     return products_grouped_review
@@ -408,20 +399,18 @@ def count_unique_products_per_sheet(exact_match_df):
 
     for i in range(len(exact_match_df)):
         row = exact_match_df.iloc[i]
-        all_products.append((row['Sheet 1'], row['SKU 1'], row['Nombre SKU 1']))
-        all_products.append((row['Sheet 2'], row['SKU 2'], row['Nombre SKU 2']))
+        all_products.append((row['Sheet 1'], row['SKU 1'], row['Nombre SKU 1'], row["Marca"]))
+        all_products.append((row['Sheet 2'], row['SKU 2'], row['Nombre SKU 2'], row["Marca"]))
 
-    product_df = pd.DataFrame(all_products, columns=["Sheet", "SKU", "Nombre SKU"])
+    product_df = pd.DataFrame(all_products, columns=["Sheet", "SKU", "Nombre SKU", "Marca"])
 
-    # Drop duplicates by Sheet + SKU
-    unique_df = product_df.drop_duplicates(subset=["Sheet", "SKU", "Nombre SKU"])
+    # Drop duplicates across all columns (Sheet + SKU + Nombre SKU + Marca)
+    unique_df = product_df.drop_duplicates(subset=["Sheet", "SKU", "Nombre SKU", "Marca"])
 
-    # Count unique SKUs per sheet
-    counts = unique_df.groupby("Sheet")["SKU"].nunique().to_dict()
+    # Now count per Sheet
+    counts = unique_df.groupby("Sheet").size().to_dict()
 
     return counts
-
-
 
 
 def find_common_products(dfs, df_names=None):
