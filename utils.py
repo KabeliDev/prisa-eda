@@ -57,7 +57,7 @@ def extract_good_numbers(text):
 
 def find_internal_duplicates(df):
     """
-    Finds products from the same subempresa with the same SKU.
+    Finds products from the same subempresa with the same SKU and Nombre SKU.
     """
     duplicates = (
         df.groupby(['Sheet', 'SKU', 'Nombre SKU'])
