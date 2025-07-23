@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 
 def visualize(
-        duplicates,
+
         different_sku_review_count,
         different_sku_conf_count,
         same_name_same_sku_count,
@@ -11,7 +11,7 @@ def visualize(
         additional_name=None
 ):
     labels = [
-        "Duplicados de SKU dentro de la misma empresa",
+
         'Nombres y SKUs exactamente iguales',
         'Nombres similares con SKUs iguales',
         'Nombres distintos (productos iguales) con SKUs distintos\n(subempresas)',
@@ -23,7 +23,7 @@ def visualize(
     x = range(len(labels))
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(0, duplicates, color='gray')
+
     ax.bar(1, same_name_same_sku_count, color='blue')
     ax.bar(2, similar_name_same_sku_count, color='purple')
     ax.bar(3, different_sku_review_count, label='Con duda, > 88 % de similitud', color='green')
@@ -40,7 +40,7 @@ def visualize(
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=10, ha='center')
     ax.legend()
-    ax.text(0, duplicates / 2, str(duplicates), ha='center', va='center')
+
     ax.text(1, same_name_same_sku_count / 2, str(same_name_same_sku_count), ha='center', va='center')
     ax.text(2, similar_name_same_sku_count / 2, str(similar_name_same_sku_count), ha='center', va='center')
     ax.text(3, group1_total / 2, str(group1_total), ha='center', va='center')
