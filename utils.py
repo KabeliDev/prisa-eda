@@ -274,7 +274,7 @@ def subtract_table(df_all, confident):
     confident_pairs_2 = list(zip(confident['Marca'],confident['Nombre SKU 2'],  confident['SKU 2']))
 
     confident_pairs_set = set(confident_pairs_1 + confident_pairs_2)
-    filtered_df = df_all[~df_all.apply(lambda row: (row['Marca'], row['SKU'], row["Nombre SKU"]) in confident_pairs_set, axis=1)]
+    filtered_df = df_all[~df_all.apply(lambda row: (row['Marca'], row["Nombre SKU"],  row['SKU']) in confident_pairs_set, axis=1)]
     return filtered_df
 
 
@@ -295,7 +295,9 @@ def find_normal_cases(excel_path):
         low_confidence_threshold=85
     )
     df_all = load_all_sheets(excel_path)
+    print(df_all.shape)
     filtered = subtract_table(df_all, confident)
+    print(filtered.shape)
     filtered = subtract_table(filtered, needs_review)
     filtered = subtract_table(filtered, exact_matches)
     filtered = subtract_table(filtered, partial_matches)

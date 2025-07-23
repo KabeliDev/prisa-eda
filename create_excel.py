@@ -1,4 +1,7 @@
 import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+from openpyxl.utils import get_column_letter
 from utils import count_unique_products_per_sheet, load_all_sheets, remove_flavor_variants, find_similar_products, \
     find_normal_cases, pairs_to_unique_products, process_excel_for_duplicates, find_internal_duplicates
 
@@ -101,3 +104,53 @@ if __name__=="__main__":
     df = pd.DataFrame(dictionaries, index=column_names).T.fillna(0).astype(int)
     df.index.name = "Company"
     print(results)
+
+
+    df_reset = df.reset_index()
+
+    excel_path = "Products for each company.xlsx"
+    df_reset.to_excel(excel_path, index=False)
+
+
+    column_colors = {
+        "Company": "D3D3D3",                # Light Gray
+        "Total": "D3D3D3",                  # Light Gray
+        "Duplicates": "A52A2A",            # Brown
+        "Same SKU, same name": "87CEEB",   # Blue
+        "Same SKU, similar name": "9370DB",# Purple
+        "Same product, different SKU": "90EE90", # Green
+        "Unique Products": "FF7F7F"        # Red
+    }
+
+    column_widths = {
+        "Company": 30,
+        "Duplicates": 15,
+        "Same SKU, same name": 22,
+        "Same SKU, similar name": 25,
+        "Same product, different SKU": 28,
+        "Unique Products": 18,
+        "Total": 10
+    }
+
+    wb = load_workbook(excel_path)
+    ws = wb.active
+
+    header = [cell.value for cell in ws[1]]
+
+    for col_idx, col_name in enumerate(header, start=1):
+
+        color = column_colors.get(col_name)
+        if color:
+            fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+            for row in range(2, ws.max_row + 1):
+                ws.cell(row=row, column=col_idx).fill = fill
+
+        width = column_widths.get(col_name, 15)
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    from openpyxl.styles import Font
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    ws.freeze_panes = "B2"
+    # Save
+    wb.save(excel_path)
