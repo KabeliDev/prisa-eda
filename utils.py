@@ -1,7 +1,6 @@
 import pandas as pd
 import re
 from fuzzywuzzy import fuzz
-from itertools import combinations
 from difflib import SequenceMatcher
 from Levenshtein import distance as levenshtein_distance
 from collections import defaultdict
@@ -271,10 +270,11 @@ def split_matches_by_company(exact_df, partial_df):
 def subtract_table(df_all, confident):
     """find samples from df_all that are not present in other df confident"""
     confident_pairs_1 = list(zip(confident['Marca'], confident['Nombre SKU 1'], confident['SKU 1']))
-    confident_pairs_2 = list(zip(confident['Marca'],confident['Nombre SKU 2'],  confident['SKU 2']))
+    confident_pairs_2 = list(zip(confident['Marca'], confident['Nombre SKU 2'], confident['SKU 2']))
 
     confident_pairs_set = set(confident_pairs_1 + confident_pairs_2)
-    filtered_df = df_all[~df_all.apply(lambda row: (row['Marca'], row["Nombre SKU"],  row['SKU']) in confident_pairs_set, axis=1)]
+    filtered_df = df_all[
+        ~df_all.apply(lambda row: (row['Marca'], row["Nombre SKU"], row['SKU']) in confident_pairs_set, axis=1)]
     return filtered_df
 
 
@@ -292,7 +292,7 @@ def find_normal_cases(excel_path):
     confident, needs_review = process_excel_for_duplicates(
         excel_path,
         confidence_threshold=93,
-        low_confidence_threshold=85
+        low_confidence_threshold=77
     )
     df_all = load_all_sheets(excel_path)
     print(df_all.shape)
@@ -422,7 +422,6 @@ def find_common_products(dfs, df_names=None):
     """
     if df_names is None:
         df_names = [f"df_{i}" for i in range(len(dfs))]
-
 
     standardized_dfs = []
     for df in dfs:

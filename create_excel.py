@@ -26,7 +26,7 @@ if __name__=="__main__":
     confident, needs_review = process_excel_for_duplicates(
         excel_path,
         confidence_threshold=93,
-        low_confidence_threshold=85
+        low_confidence_threshold=77
     )
     condident_prod = pairs_to_unique_products(confident)
     need_review_prod = pairs_to_unique_products(needs_review)
