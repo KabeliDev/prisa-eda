@@ -9,6 +9,7 @@ from itertools import combinations
 
 
 def normalize_text(text):
+    """Text normalization"""
     text = text.lower()
     text = re.sub(r'[^\w\s]', '', text)  # remove punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # remove extra spaces
